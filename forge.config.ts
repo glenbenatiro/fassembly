@@ -3,17 +3,17 @@ import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
 import { MakerDeb } from '@electron-forge/maker-deb';
 import { MakerRpm } from '@electron-forge/maker-rpm';
+import { PublisherGithub } from '@electron-forge/publisher-github';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
 
 const config: ForgeConfig = {
   packagerConfig: {
-    // ffmpeg-static ships a binary that must live outside the asar archive so it
-    // stays executable in packaged builds.
-    asar: {
-      unpack: '**/node_modules/ffmpeg-static/**',
-    },
+    asar: true,
+    // Ship the ffmpeg binary as a plain resource (resolved at runtime via
+    // process.resourcesPath). A binary cannot run from inside the asar archive.
+    extraResource: ['./node_modules/ffmpeg-static/ffmpeg.exe'],
   },
   rebuildConfig: {},
   makers: [
@@ -21,6 +21,13 @@ const config: ForgeConfig = {
     new MakerZIP({}, ['darwin']),
     new MakerRpm({}),
     new MakerDeb({}),
+  ],
+  publishers: [
+    new PublisherGithub({
+      repository: { owner: 'glenbenatiro', name: 'fassembly' },
+      draft: true, // upload to a draft Release; review then publish manually
+      authToken: process.env.GITHUB_TOKEN,
+    }),
   ],
   plugins: [
     new VitePlugin({
