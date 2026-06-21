@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { DragEvent } from 'react';
 import type { Session } from '../App';
 import { Button, StepHeader } from '../components/ui';
+import { parentDir } from '../util';
 
 export function SelectFile({
   session,
@@ -17,7 +18,9 @@ export function SelectFile({
   const setFile = (filePath: string | null) => {
     if (!filePath) return;
     const name = filePath.split(/[\\/]/).pop() ?? filePath;
-    update({ filePath, fileName: name });
+    // Default the save folder to the recording's own folder. The user can still
+    // pick another on the Review screen.
+    update({ filePath, fileName: name, outputDir: parentDir(filePath) || session.outputDir });
   };
 
   const onBrowse = async () => setFile(await window.api.pickFile());
