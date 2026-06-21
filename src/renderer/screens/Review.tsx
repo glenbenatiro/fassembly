@@ -100,7 +100,7 @@ export function Review({
         </Field>
       </div>
 
-      <Field label="Output folder" hint="Defaults to the folder set in Settings. Remembered for next time.">
+      <Field label="Output folder" hint="Defaults to the recording's folder. Pick another to save elsewhere.">
         <div className="flex gap-2">
           <input
             className={inputClass}

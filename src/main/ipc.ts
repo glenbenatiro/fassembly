@@ -90,8 +90,6 @@ export function registerIpc(): void {
     const filePath = await uniquePath(path.join(req.outputDir, filename));
     await fs.promises.writeFile(filePath, renderMarkdown(req), 'utf8');
 
-    // Remember this folder so it is the default next time.
-    saveSettings({ defaultOutputDir: req.outputDir });
     return { filePath };
   });
 
