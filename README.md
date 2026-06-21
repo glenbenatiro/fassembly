@@ -1,4 +1,4 @@
-# Meeting Transcriber
+# Fassembly
 
 A small cross-platform desktop app that turns meeting recordings into clean, speaker-labelled markdown transcripts. It wraps the manual steps (convert the file, upload to AssemblyAI, pick the model, set the speakers, copy the result into markdown) into one quick flow.
 
@@ -35,7 +35,22 @@ While you are in Settings, you can also set a default output folder for each job
 npm run make
 ```
 
-This produces an installer for your current platform under `out/`. Electron Forge is configured with makers for Windows, macOS, and Linux.
+This produces an installer for your current platform under `out/`. Electron Forge is configured with makers for Windows, macOS, and Linux. On Windows, the installer lands at `out/make/squirrel.windows/x64/<name> Setup.exe`.
+
+## Releasing
+
+Installers are distributed as **GitHub Release assets** (build artifacts are not committed). A GitHub Actions workflow (`.github/workflows/release.yml`) builds the Windows installer and uploads it to a draft Release when you push a version tag:
+
+```bash
+# 1. Bump the version in package.json to match the tag you will push.
+# 2. Commit it, then:
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The workflow builds on a Windows runner and publishes via Electron Forge's GitHub publisher to a **draft** Release titled after the version (e.g. `v1.0.0`). Review it on the repo's Releases page, then click **Publish release** to make it public. You can also trigger a test run from the Actions tab (manual `workflow_dispatch`).
+
+The installer is currently unsigned, so Windows SmartScreen shows an "unknown publisher" prompt — users click **More info → Run anyway**. Code signing (an Authenticode certificate) removes this.
 
 ## How it works
 

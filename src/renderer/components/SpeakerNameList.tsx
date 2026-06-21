@@ -31,7 +31,10 @@ export function SpeakerNameList({
           </Button>
         </div>
       ))}
-      <button onClick={add} className="text-sm text-indigo-400 hover:text-indigo-300">
+      <button
+        onClick={add}
+        className="text-sm font-medium text-pine hover:text-pine-deep"
+      >
         + Add name
       </button>
     </div>

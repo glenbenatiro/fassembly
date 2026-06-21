@@ -1,4 +1,4 @@
-import { app, BrowserWindow, session } from 'electron';
+import { app, BrowserWindow, session, shell } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { registerIpc } from './main/ipc';
@@ -16,13 +16,35 @@ const createWindow = () => {
     height: 760,
     minWidth: 900,
     minHeight: 620,
-    backgroundColor: '#0b1120',
+    backgroundColor: '#F4EDE0',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
     },
+  });
+
+  // Defense-in-depth: the renderer only ever loads local app content. Deny any
+  // attempt to open a new in-app window, and route real web links to the user's
+  // default browser instead.
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('https:') || url.startsWith('http:')) {
+      void shell.openExternal(url);
+    }
+    return { action: 'deny' };
+  });
+
+  // Block navigation away from the app's own content. The only legitimate
+  // navigations are the initial load and (in dev) Vite HMR reloads of the dev
+  // server URL; everything else is refused.
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    const devUrl = MAIN_WINDOW_VITE_DEV_SERVER_URL;
+    const sameAsCurrent = url === mainWindow.webContents.getURL();
+    const isDevServer = !!devUrl && url.startsWith(devUrl);
+    if (!sameAsCurrent && !isDevServer) {
+      event.preventDefault();
+    }
   });
 
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {

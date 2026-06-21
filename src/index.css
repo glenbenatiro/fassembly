@@ -1,9 +1,15 @@
+/* Fonts (bundled via @fontsource — offline-safe for Electron) */
+@import '@fontsource-variable/fraunces';
+@import '@fontsource-variable/hanken-grotesk';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 }
 
 html,
@@ -14,4 +20,48 @@ body,
 
 body {
   margin: 0;
+  background-color: #f4ede0; /* paper — avoids a flash before Tailwind applies */
+  color: #2b2722; /* ink */
+  font-family: '"Hanken Grotesk Variable"', 'Hanken Grotesk', ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Warm selection */
+::selection {
+  background-color: #e8efe9; /* pine-wash */
+  color: #244a40; /* pine-deep */
+}
+
+/* Display face: soften the optical + lower the contrast for a warm feel */
+.font-display {
+  font-variation-settings: 'opsz' 40, 'SOFT' 30, 'WONK' 0;
+}
+
+/* Warm, slim scrollbars that sit on paper */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: #e4dac8; /* line */
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 9999px;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #d8ccb6;
+}
+
+/* Respect reduced motion: disable all decorative animation/transition */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

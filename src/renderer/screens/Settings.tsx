@@ -53,7 +53,7 @@ export function SettingsScreen({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold text-white">Settings</h1>
+      <h1 className="font-display text-[1.6rem] font-medium leading-tight text-ink">Settings</h1>
 
       <Card className="space-y-3">
         <Field
@@ -69,11 +69,11 @@ export function SettingsScreen({
           />
         </Field>
         <div className="flex items-center gap-3 text-sm">
-          <span className={settings.hasApiKey ? 'text-emerald-400' : 'text-amber-400'}>
+          <span className={settings.hasApiKey ? 'text-pine' : 'text-amber'}>
             {settings.hasApiKey ? '● Key saved' : '● No key set'}
           </span>
           {settings.hasApiKey && (
-            <button onClick={clearKey} className="text-slate-400 underline hover:text-white">
+            <button onClick={clearKey} className="text-ink-soft underline hover:text-ink">
               Clear key
             </button>
           )}
@@ -121,9 +121,9 @@ export function SettingsScreen({
       </Card>
 
       <div className="flex items-center justify-end gap-3">
-        {status && <span className="text-sm text-slate-400">{status}</span>}
+        {status && <span className="text-sm text-ink-soft">{status}</span>}
         <Button onClick={save} disabled={busy}>
-          {busy ? 'Saving...' : 'Save settings'}
+          {busy ? 'Saving…' : 'Save settings'}
         </Button>
       </div>
     </div>
