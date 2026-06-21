@@ -27,15 +27,18 @@ export function Configure({
   return (
     <div className="space-y-6">
       <StepHeader
-        step={2}
+        eyebrow="Before we start"
         title="Set up the transcription"
         subtitle="These match the options you would pick in the AssemblyAI web app."
       />
 
       {!settings.hasApiKey && (
-        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+        <div className="rounded-lg border border-amber/30 bg-amber-wash px-4 py-3 text-sm text-amber">
           No AssemblyAI API key yet.{' '}
-          <button onClick={goSettings} className="underline hover:text-white">
+          <button
+            onClick={goSettings}
+            className="font-medium text-pine underline hover:text-pine-deep"
+          >
             Add it in Settings
           </button>{' '}
           to transcribe.
@@ -85,7 +88,7 @@ export function Configure({
           Back
         </Button>
         <Button onClick={runTranscription} disabled={!settings.hasApiKey || session.running}>
-          {session.running ? 'Working...' : 'Transcribe'}
+          {session.running ? 'Working…' : 'Transcribe'}
         </Button>
       </div>
     </div>

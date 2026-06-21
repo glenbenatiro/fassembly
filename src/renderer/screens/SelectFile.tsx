@@ -32,7 +32,7 @@ export function SelectFile({
   return (
     <div className="space-y-6">
       <StepHeader
-        step={1}
+        eyebrow="New transcript"
         title="Choose a recording"
         subtitle="Drop in an audio or video file from a meeting."
       />
@@ -44,18 +44,18 @@ export function SelectFile({
         }}
         onDragLeave={() => setDragOver(false)}
         onDrop={onDrop}
-        className={`flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-12 text-center transition ${
-          dragOver ? 'border-indigo-400 bg-indigo-500/10' : 'border-slate-700 bg-slate-900/40'
+        className={`flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-12 text-center transition-colors ${
+          dragOver ? 'border-pine bg-pine-wash' : 'border-line bg-paper-raised'
         }`}
       >
         <div className="text-3xl">📼</div>
         {session.fileName ? (
           <div>
-            <div className="font-medium text-slate-200">{session.fileName}</div>
-            <div className="text-xs text-slate-500">Ready to transcribe</div>
+            <div className="font-medium text-ink">{session.fileName}</div>
+            <div className="text-xs text-ink-faint">Ready to transcribe</div>
           </div>
         ) : (
-          <div className="text-slate-400">Drag a file here, or</div>
+          <div className="text-ink-soft">Drag a file here, or</div>
         )}
         <Button variant="ghost" onClick={onBrowse}>
           Browse files

@@ -1,0 +1,35 @@
+name: Release
+
+# Builds the Windows installer and uploads it to a (draft) GitHub Release.
+# Trigger by pushing a version tag, e.g.:
+#   git tag v1.0.0 && git push origin v1.0.0
+# Or run manually from the Actions tab (workflow_dispatch) to test.
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write # allow GITHUB_TOKEN to create the Release and upload assets
+
+jobs:
+  release-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build and publish to GitHub Release
+        run: npm run publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

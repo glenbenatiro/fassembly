@@ -66,14 +66,14 @@ export function Review({
   return (
     <div className="space-y-6">
       <StepHeader
-        step={3}
+        eyebrow="Final pass"
         title="Review and save"
-        subtitle={`${result.utterances.length} segments, ${result.speakers.length} speakers`}
+        subtitle={`${result.utterances.length} segments · ${result.speakers.length} speakers`}
       />
 
       <Card>
-        <div className="mb-1 text-sm font-medium text-slate-300">Speaker names</div>
-        <p className="mb-3 text-xs text-slate-500">
+        <div className="mb-1 text-[0.8125rem] font-medium text-ink-soft">Speaker names</div>
+        <p className="mb-3 text-xs text-ink-faint">
           Rename any that came back wrong. Changes apply across the whole transcript.
         </p>
         <SpeakerRemapEditor
@@ -115,12 +115,12 @@ export function Review({
       </Field>
 
       <Card>
-        <div className="mb-3 text-sm font-medium text-slate-300">Preview</div>
+        <div className="mb-3 text-[0.8125rem] font-medium text-ink-soft">Preview</div>
         <TranscriptView utterances={remappedUtterances} />
       </Card>
 
       {error && (
-        <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+        <div className="rounded-lg border border-brick/30 bg-brick-wash px-4 py-3 text-sm text-brick">
           {error}
         </div>
       )}
@@ -130,7 +130,7 @@ export function Review({
           Back
         </Button>
         <Button onClick={save} disabled={saving}>
-          {saving ? 'Saving...' : 'Save markdown'}
+          {saving ? 'Saving…' : 'Save markdown'}
         </Button>
       </div>
     </div>
