@@ -1,15 +1,14 @@
 import { defineConfig } from 'vite';
+import { builtinModules } from 'node:module';
 
-// Native and binary-bearing modules must stay external so they are required
-// from node_modules at runtime instead of being bundled. ffmpeg-static in
-// particular resolves to an on-disk binary path that bundling would break.
+// Externalize only Electron and Node built-ins. Everything else (electron-store
+// etc.) is bundled into the main process file, because the Forge Vite setup does
+// not ship node_modules. ffmpeg-static is not imported at runtime - its binary is
+// shipped via extraResource and resolved by path - so it does not need to be here.
 const external = [
   'electron',
-  'electron-squirrel-startup',
-  'electron-store',
-  'assemblyai',
-  'ffmpeg-static',
-  'fluent-ffmpeg',
+  ...builtinModules,
+  ...builtinModules.map((m) => `node:${m}`),
 ];
 
 // https://vitejs.dev/config
