@@ -8,6 +8,7 @@ import { Review } from './screens/Review';
 import { ExportDone } from './screens/Export';
 import { RecordScreen } from './screens/Record';
 import { SettingsScreen } from './screens/Settings';
+import { Stepper } from './components/Stepper';
 import { todayIso } from './util';
 
 export type Tab = 'transcribe' | 'record' | 'settings';
@@ -119,13 +120,11 @@ export function App() {
   }, [session, update]);
 
   if (!settings || !session) {
-    return (
-      <div className="grid h-full place-items-center bg-slate-950 text-slate-400">Loading...</div>
-    );
+    return <div className="grid h-full place-items-center bg-paper text-ink-faint">Loading…</div>;
   }
 
   return (
-    <div className="flex h-full flex-col bg-slate-950 text-slate-100">
+    <div className="flex h-full flex-col bg-paper text-ink">
       <Nav tab={tab} onChange={setTab} hasApiKey={settings.hasApiKey} />
       <main className="flex-1 overflow-y-auto">
         <div className="mx-auto w-full max-w-3xl px-6 py-8">
@@ -162,33 +161,48 @@ function TranscribeFlow({
   resetFlow: () => void;
   goSettings: () => void;
 }) {
-  switch (session.step) {
-    case 'select':
-      return <SelectFile session={session} update={update} onNext={() => update({ step: 'configure' })} />;
-    case 'configure':
-      return (
-        <Configure
-          session={session}
-          settings={settings}
-          update={update}
-          runTranscription={runTranscription}
-          onBack={() => update({ step: 'select' })}
-          goSettings={goSettings}
-        />
-      );
-    case 'progress':
-      return (
-        <ProgressScreen
-          session={session}
-          onRetry={runTranscription}
-          onBack={() => update({ step: 'configure', error: null })}
-        />
-      );
-    case 'review':
-      return <Review session={session} update={update} onBack={() => update({ step: 'configure' })} />;
-    case 'done':
-      return <ExportDone session={session} onReset={resetFlow} />;
-    default:
-      return null;
-  }
+  const screen = () => {
+    switch (session.step) {
+      case 'select':
+        return (
+          <SelectFile session={session} update={update} onNext={() => update({ step: 'configure' })} />
+        );
+      case 'configure':
+        return (
+          <Configure
+            session={session}
+            settings={settings}
+            update={update}
+            runTranscription={runTranscription}
+            onBack={() => update({ step: 'select' })}
+            goSettings={goSettings}
+          />
+        );
+      case 'progress':
+        return (
+          <ProgressScreen
+            session={session}
+            onRetry={runTranscription}
+            onBack={() => update({ step: 'configure', error: null })}
+          />
+        );
+      case 'review':
+        return (
+          <Review session={session} update={update} onBack={() => update({ step: 'configure' })} />
+        );
+      case 'done':
+        return <ExportDone session={session} onReset={resetFlow} />;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div>
+      {session.step !== 'done' && <Stepper step={session.step} />}
+      <div key={session.step} className="animate-fade-rise">
+        {screen()}
+      </div>
+    </div>
+  );
 }

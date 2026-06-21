@@ -23,11 +23,11 @@ export function ProgressScreen({
 
   return (
     <div className="space-y-6">
-      <StepHeader step={2} title="Transcribing" subtitle={session.fileName} />
+      <StepHeader eyebrow="Working" title="Transcribing" subtitle={session.fileName} />
 
       {error ? (
         <div className="space-y-4">
-          <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+          <div className="rounded-lg border border-brick/30 bg-brick-wash px-4 py-3 text-sm text-brick">
             {error}
           </div>
           <div className="flex gap-2">
@@ -45,22 +45,22 @@ export function ProgressScreen({
             return (
               <div key={s.key} className="flex items-center gap-3">
                 <span
-                  className={`grid h-6 w-6 place-items-center rounded-full text-xs ${
+                  className={`grid h-6 w-6 place-items-center rounded-full text-xs font-semibold ${
                     done
-                      ? 'bg-emerald-500 text-white'
+                      ? 'bg-pine text-paper-raised'
                       : active
-                        ? 'bg-indigo-500 text-white'
-                        : 'bg-slate-700 text-slate-400'
+                        ? 'animate-breathe border-2 border-pine bg-paper-raised text-pine-deep'
+                        : 'border border-line bg-paper-raised text-ink-faint'
                   }`}
                 >
                   {done ? '✓' : i + 1}
                 </span>
-                <span className={active || done ? 'text-white' : 'text-slate-400'}>{s.label}</span>
+                <span className={active || done ? 'text-ink' : 'text-ink-faint'}>{s.label}</span>
               </div>
             );
           })}
-          <p className="animate-pulse text-xs text-slate-500">
-            {session.progress?.message ?? 'Starting...'}
+          <p className="animate-pulse text-xs text-ink-faint">
+            {session.progress?.message ?? 'Starting…'}
           </p>
         </Card>
       )}
