@@ -25,7 +25,9 @@ const config: ForgeConfig = {
   publishers: [
     new PublisherGithub({
       repository: { owner: 'glenbenatiro', name: 'fassembly' },
-      draft: true, // upload to a draft Release; review then publish manually
+      // Promoting to `production` is the deliberate act, so publish for real
+      // rather than parking a draft that needs a second click.
+      draft: false,
       authToken: process.env.GITHUB_TOKEN,
     }),
   ],

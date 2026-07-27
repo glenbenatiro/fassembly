@@ -92,3 +92,16 @@ typings/
 
 # Electron-Forge
 out/
+
+# Recordings and transcripts. This repo is public and the app writes transcripts
+# next to the recording by default, so never let media or output land in a commit.
+*.mp3
+*.mp4
+*.m4a
+*.wav
+*.mkv
+*.mov
+*.webm
+*.aac
+*.flac
+/transcripts/

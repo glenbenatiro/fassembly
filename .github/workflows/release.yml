@@ -1,17 +1,28 @@
 name: Release
 
-# Builds the Windows installer and uploads it to a (draft) GitHub Release.
-# Trigger by pushing a version tag, e.g.:
-#   git tag v1.0.0 && git push origin v1.0.0
-# Or run manually from the Actions tab (workflow_dispatch) to test.
+# Every commit that lands on `production` is a release.
+#
+#   1. bump the version on main:  npm version --no-git-tag-version minor
+#   2. promote:                   npm run promote
+#   3. this workflow tags v<version>, builds the Windows installer, and publishes
+#
+# `production` is fast-forward-only, so it always points at a commit that already
+# passed CI on `main`.
+#
+# Electron Forge names the GitHub Release from package.json's version rather than
+# from a git tag, so the guard below fails the run if that version already shipped.
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [production]
   workflow_dispatch:
 
 permissions:
-  contents: write # allow GITHUB_TOKEN to create the Release and upload assets
+  contents: write # create the tag and the Release, and upload the installer
+
+# Never let two releases build at once; they would race on the same tag.
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   release-windows:
@@ -19,6 +30,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # need the full tag list to detect an unbumped version
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -26,10 +39,46 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
+      - name: Read version from package.json
+        id: version
+        shell: bash
+        run: echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Refuse to re-release an unbumped version
+        shell: bash
+        run: |
+          tag='${{ steps.version.outputs.tag }}'
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            echo "::error::$tag already exists. Bump the version in package.json on main before promoting."
+            exit 1
+          fi
+          echo "Releasing $tag"
+
+      # Tag explicitly, at the production commit. If we let the Forge publisher
+      # create the tag implicitly, GitHub would anchor it to the default branch.
+      - name: Tag the release commit
+        shell: bash
+        run: |
+          tag='${{ steps.version.outputs.tag }}'
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git tag -a "$tag" -m "$tag"
+          git push origin "$tag"
+
       - name: Install dependencies
         run: npm ci
 
-      - name: Build and publish to GitHub Release
+      - name: Build and publish the GitHub Release
         run: npm run publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fill in the release notes
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag='${{ steps.version.outputs.tag }}'
+          gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" \
+            -f tag_name="$tag" -q .body > notes.md
+          gh release edit "$tag" --notes-file notes.md

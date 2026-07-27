@@ -37,20 +37,35 @@ npm run make
 
 This produces an installer for your current platform under `out/`. Electron Forge is configured with makers for Windows, macOS, and Linux. On Windows, the installer lands at `out/make/squirrel.windows/x64/<name> Setup.exe`.
 
+## Branches
+
+Two long-lived branches:
+
+- **`main`** - integration. Every change lands here by pull request. CI (`.github/workflows/ci.yml`) runs lint and typecheck on each PR.
+- **`production`** - a pointer at a known-good `main` commit. **Fast-forward only**, so it can only ever reference a commit that already passed CI on `main`. Every commit that lands here is released.
+
 ## Releasing
 
-Installers are distributed as **GitHub Release assets** (build artifacts are not committed). A GitHub Actions workflow (`.github/workflows/release.yml`) builds the Windows installer and uploads it to a draft Release when you push a version tag:
+Installers are distributed as **GitHub Release assets** (build artifacts are not committed). Releasing is promoting `main` to `production`:
 
 ```bash
-# 1. Bump the version in package.json to match the tag you will push.
-# 2. Commit it, then:
-git tag v1.0.0
-git push origin v1.0.0
+# 1. On main, bump the version (the release is named after it):
+npm version --no-git-tag-version minor
+git commit -am "Release v1.1.0" && git push
+
+# 2. Promote:
+npm run promote
 ```
 
-The workflow builds on a Windows runner and publishes via Electron Forge's GitHub publisher to a **draft** Release titled after the version (e.g. `v1.0.0`). Review it on the repo's Releases page, then click **Publish release** to make it public. You can also trigger a test run from the Actions tab (manual `workflow_dispatch`).
+`npm run promote` fast-forwards `production` to `origin/main` and pushes it. A non-fast-forward promote fails locally rather than creating a merge commit.
+
+That push triggers `.github/workflows/release.yml`, which tags the commit `v<version>`, builds the Windows installer on a Windows runner, publishes a GitHub Release via Electron Forge's GitHub publisher, and fills in generated release notes. Don't create tags by hand - the workflow owns them.
+
+If you promote without bumping the version, the workflow **fails on purpose** with `vX.Y.Z already exists`, because Forge names the Release from `package.json` rather than from the tag. Bump and promote again.
 
 The installer is currently unsigned, so Windows SmartScreen shows an "unknown publisher" prompt - users click **More info → Run anyway**. Code signing (an Authenticode certificate) removes this.
+
+Only Windows is built. `forge.config.ts` ships `ffmpeg.exe` via `extraResource`, so the macOS and Linux makers would fail at packaging until that is made platform-aware.
 
 ## How it works
 
@@ -80,7 +95,7 @@ src/
   preload.ts           context bridge (window.api)
   main/
     ipc.ts             IPC handlers
-    settings.ts        electron-store + safeStorage
+    settings.ts        JSON settings store + safeStorage
     ffmpeg.ts          audio extraction
     markdown.ts        transcript -> markdown
     stt/               speech-to-text provider interface + AssemblyAI

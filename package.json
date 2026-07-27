@@ -10,7 +10,9 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "eslint --ext .ts,.tsx ."
+    "lint": "eslint --ext .ts,.tsx .",
+    "typecheck": "tsc --noEmit",
+    "promote": "git fetch origin --prune && git checkout production && git merge --ff-only origin/main && git push origin production && git checkout main"
   },
   "keywords": [],
   "author": "glenb",
