@@ -3,7 +3,7 @@ import type { IdentificationStatus, Utterance } from '../../shared/types';
 /**
  * Turning AssemblyAI's Speaker Identification result into names we can trust.
  *
- * Three things go wrong in practice, all of them observed on real recordings:
+ * Four things go wrong in practice, all of them observed on real recordings:
  *
  *  1. It returns an *identity* mapping ({ A: 'A' }) with status "success" when
  *     the audio gave it nothing to work with.
@@ -12,12 +12,23 @@ import type { IdentificationStatus, Utterance } from '../../shared/types';
  *  3. It can be confidently *wrong*: it reads "Hi Dana, sorry I'm late" as
  *     evidence that the person speaking is Dana, when being addressed by a name
  *     is precisely evidence that you are *not* that person.
+ *  4. It can be confident with no evidence whatsoever. On a call where neither
+ *     participant is ever named aloud it still returns a full mapping, taken
+ *     from the roster rather than recognised from the audio, and it can be
+ *     inverted.
  *
- * (3) is the dangerous one. Bare A/B labels are honest about being unknown; an
- * inverted mapping looks finished and puts one person's words in the other's
- * mouth. So the rule here is: never trust the mapping on its own - check it
- * against who actually gets addressed, and refuse to assert a name we cannot
- * corroborate.
+ * (3) and (4) are the dangerous ones, and they fail differently. A wrong mapping
+ * can be caught by argument: check each name against who actually gets addressed,
+ * since you say the other person's name far more than your own. A baseless one
+ * cannot, because there is nothing to argue with. It needs the prior question
+ * asked instead: was this name ever spoken at all? Identification reads the
+ * transcript for names, so a name absent from the transcript cannot have been
+ * read from it.
+ *
+ * Hence two gates, in order: corroboration first (is there any evidence?), then
+ * contradiction (does the evidence agree?). Bare A/B labels are honest about
+ * being unknown; a wrong name is confidently wrong, so anything that survives
+ * neither gate is discarded rather than asserted.
  */
 
 export interface IdentificationResult {
@@ -119,6 +130,21 @@ export function addressesName(text: string, name: string): boolean {
     if (/^[,\s]*\b(can|could|would|will|do|did|are|is|please|whenever|if)\b/i.test(after)) return true;
   }
   return false;
+}
+
+/**
+ * Is `name` said at all here, in any form? Deliberately the loosest of the three
+ * checks: it does not care who is speaking or why, only whether the recogniser
+ * had the word in front of it.
+ *
+ * This is what corroboration is built on, so it errs permissive on purpose. A
+ * false positive costs nothing (the mapping is merely allowed through to the
+ * contradiction checks); a false negative would discard a name that was in fact
+ * supported.
+ */
+export function mentionsName(text: string, name: string): boolean {
+  const tokens = text.match(/[A-Za-z']+/g) ?? [];
+  return tokens.some((t) => near(t, name));
 }
 
 /**
@@ -253,6 +279,36 @@ export function resolveIdentification({
       mapping: null,
       status: 'unresolved',
       note: 'Nobody in this recording is introduced or addressed by name.',
+    };
+  }
+
+  // Corroboration. The contradiction checks below catch a mapping that the
+  // transcript *argues against*; they cannot catch one the transcript says
+  // nothing about, because there is no evidence for them to weigh. Identification
+  // reads the transcript for names, so a name never spoken cannot have been read
+  // from it: whatever came back was filled in from the roster, not recognised.
+  //
+  // Observed on a real recording where neither participant was ever named aloud.
+  // A confident, inverted mapping came back and every check here passed it,
+  // because with nothing said there was nothing to contradict.
+  //
+  // One unspoken name is still fine when the roster forces it: with as many
+  // speakers as names and everyone else corroborated, the remainder is arithmetic
+  // rather than a guess. Two or more unspoken names is guesswork, so refuse.
+  const unspoken = entries.filter(
+    ([, name]) => !utterances.some((u) => mentionsName(u.text, name)),
+  );
+  const forcedByElimination =
+    unspoken.length === 1 && labels.length === roster.length && entries.length === labels.length;
+
+  if (unspoken.length > 0 && !forcedByElimination) {
+    const names = unspoken.map(([, n]) => n);
+    return {
+      mapping: null,
+      status: 'uncertain',
+      note: `Automatic naming was discarded: ${names.join(' and ')} ${
+        names.length === 1 ? 'is' : 'are'
+      } never said aloud in this recording, so nothing supports the assignment. Please set the speakers yourself.`,
     };
   }
 

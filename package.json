@@ -1,7 +1,7 @@
 {
   "name": "fassembly",
   "productName": "Fassembly",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Desktop app that turns meeting recordings into speaker-labelled markdown transcripts using AssemblyAI",
   "main": ".vite/build/main.js",
   "private": true,

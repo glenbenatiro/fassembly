@@ -51,7 +51,9 @@ test('the roster spelling wins over the recogniser', () => {
   const r = resolveIdentification({
     rawMapping: { A: 'Dena', B: 'Sebastian' },
     roster: ROSTER,
-    utterances: [u('A', 'I built the thing'), u('B', 'thanks for that')],
+    // The claim matters: it is what corroborates the mapping. With no name
+    // spoken anywhere this would be the baseless case below, not a snapping one.
+    utterances: [u('A', "I'm Dena, I built the thing"), u('B', 'thanks for that')],
   });
   assert.deepEqual(r.mapping, { A: 'Dana', B: 'Sebastian' });
   assert.equal(r.status, 'success');
@@ -127,6 +129,55 @@ test('a contradiction that swapping cannot explain discards the names', () => {
     ],
   });
   // Better a bare label than a confidently wrong name.
+  assert.equal(r.mapping, null);
+  assert.equal(r.status, 'uncertain');
+});
+
+test('a mapping the transcript says nothing about is discarded', () => {
+  // The regression this module gained last: on a real call neither participant
+  // was ever named aloud, and a full, inverted mapping came back as "success".
+  // Every contradiction check passed it, because with no name said there was
+  // nothing to contradict. Corroboration has to be asked first.
+  const r = resolveIdentification({
+    rawMapping: { A: 'Dana', B: 'Sebastian' },
+    roster: ROSTER,
+    utterances: [
+      u('A', 'the database we make, I was imagining if there can be a website for it'),
+      u('B', 'yes, I was also thinking about the new site, it is in active development'),
+      u('A', 'if everyone could have their own work email that would make login easy'),
+      u('B', 'we already have the students and the staff, so this is the natural next step'),
+    ],
+  });
+  assert.equal(r.mapping, null);
+  assert.equal(r.status, 'uncertain');
+  assert.match(r.note ?? '', /never said aloud/);
+});
+
+test('an unspoken name still stands when the roster forces it', () => {
+  // The guard against over-correcting. One name is spoken, there are as many
+  // speakers as roster names, so the remaining one is arithmetic, not a guess.
+  const r = resolveIdentification({
+    rawMapping: { A: 'Dana', B: 'Sebastian' },
+    roster: ROSTER,
+    utterances: [
+      u('A', "That's me. Dana Whitfield."),
+      u('B', 'right, and I will get the accounts set up'),
+    ],
+  });
+  assert.deepEqual(r.mapping, { A: 'Dana', B: 'Sebastian' });
+  assert.equal(r.status, 'success');
+});
+
+test('two unspoken names are guesswork, even with a full roster', () => {
+  const r = resolveIdentification({
+    rawMapping: { A: 'Dana', B: 'Sebastian', C: 'Priya' },
+    roster: ['Dana', 'Sebastian', 'Priya'],
+    utterances: [
+      u('A', "That's me. Dana Whitfield."),
+      u('B', 'sounds good to me'),
+      u('C', 'agreed, let us do that'),
+    ],
+  });
   assert.equal(r.mapping, null);
   assert.equal(r.status, 'uncertain');
 });
