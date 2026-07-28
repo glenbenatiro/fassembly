@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ModelId, Settings } from '../../shared/types';
-import { Button, Card, Field, inputClass } from '../components/ui';
+import { MODELS } from '../../shared/models';
+import { Button, Card, Field, PageTitle, inputClass } from '../components/ui';
 
 export function SettingsScreen({
   settings,
@@ -14,6 +15,7 @@ export function SettingsScreen({
   const [outputDir, setOutputDir] = useState(settings.defaultOutputDir);
   const [pattern, setPattern] = useState(settings.filenamePattern);
   const [participants, setParticipants] = useState(settings.defaultParticipants);
+  const [extract, setExtract] = useState(settings.extractConcurrency);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -35,6 +37,7 @@ export function SettingsScreen({
         defaultOutputDir: outputDir,
         filenamePattern: pattern,
         defaultParticipants: participants,
+        extractConcurrency: extract,
       });
       await onSaved();
       setStatus('Saved');
@@ -53,7 +56,7 @@ export function SettingsScreen({
 
   return (
     <div className="space-y-6">
-      <h1 className="font-display text-[1.6rem] font-medium leading-tight text-ink">Settings</h1>
+      <PageTitle>Settings</PageTitle>
 
       <Card className="space-y-3">
         <Field
@@ -81,24 +84,29 @@ export function SettingsScreen({
       </Card>
 
       <Card className="space-y-4">
-        <Field label="Default model">
+        <Field label="Default model" hint={MODELS.find((m) => m.id === model)?.hint}>
           <select
             className={inputClass}
             value={model}
             onChange={(e) => setModel(e.target.value as ModelId)}
           >
-            <option value="universal-3-pro">Universal-3 Pro (recommended)</option>
-            <option value="universal-3-5-pro">Universal-3.5 Pro (preview)</option>
-            <option value="universal-2">Universal-2</option>
+            {MODELS.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
           </select>
         </Field>
 
-        <Field label="Default output folder" hint="Where transcripts are saved unless you change it per save.">
+        <Field
+          label="Default output folder"
+          hint="Leave blank to save each transcript beside its own recording."
+        >
           <div className="flex gap-2">
             <input
               className={inputClass}
               value={outputDir}
-              placeholder="No folder set"
+              placeholder="Next to each recording"
               onChange={(e) => setOutputDir(e.target.value)}
             />
             <Button variant="ghost" onClick={browseOutputDir}>
@@ -107,7 +115,10 @@ export function SettingsScreen({
           </div>
         </Field>
 
-        <Field label="Filename pattern" hint="Token: {date}">
+        <Field
+          label="Filename pattern"
+          hint="Tokens: {date} and {name}. Keep {name} so a batch does not collapse into one filename."
+        >
           <input className={inputClass} value={pattern} onChange={(e) => setPattern(e.target.value)} />
         </Field>
 
@@ -116,6 +127,23 @@ export function SettingsScreen({
             className={inputClass}
             value={participants}
             onChange={(e) => setParticipants(e.target.value)}
+          />
+        </Field>
+      </Card>
+
+      <Card className="space-y-2">
+        <Field
+          label={`Simultaneous audio extractions: ${extract}`}
+          hint="Separate from the parallel-transcription slider. Extraction is CPU-bound, so more than a few at once makes everything slower, not faster."
+        >
+          <input
+            type="range"
+            min={1}
+            max={4}
+            step={1}
+            value={extract}
+            onChange={(e) => setExtract(Number(e.target.value))}
+            className="w-full accent-pine"
           />
         </Field>
       </Card>

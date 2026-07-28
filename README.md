@@ -6,12 +6,14 @@ Built with Electron, React, TypeScript, and Vite via Electron Forge.
 
 ## What it does
 
-1. You drop in a meeting recording (audio or video).
-2. You pick which job it belongs to and, if you want, the expected number of speakers and their names.
-3. The app strips the audio with a bundled ffmpeg, sends it to AssemblyAI, and gets back a transcript with speakers labelled.
-4. You review the transcript, fix any speaker names, and save it as markdown into the right folder.
+1. You drop in as many meeting recordings as you like - audio or video.
+2. You set the model, expected speaker count, language, and who is in the room once, as batch defaults. Any individual recording can override them.
+3. You press Transcribe. Recordings run **in parallel** (up to 10 at a time, 3 by default), each with its own progress.
+4. For each finished one you confirm who is who - you get each voice's longest line and a play button - then save it as markdown.
 
-The audio extraction step keeps uploads small. Speaker names you provide up front are passed to AssemblyAI Speaker Identification, so the transcript comes back already named.
+The audio extraction step keeps uploads small. Speaker names you provide up front are sent to AssemblyAI Speaker Identification and offered as suggestions when you confirm speakers afterwards.
+
+Parallelism is capped separately for the two stages: the slider controls how many recordings are in flight (network-bound), while a smaller limit controls concurrent ffmpeg extractions (CPU-bound). Uploads are streamed, so memory stays flat no matter how large the batch.
 
 ## Requirements
 
@@ -69,13 +71,17 @@ Only Windows is built. `forge.config.ts` ships `ffmpeg.exe` via `extraResource`,
 
 ## How it works
 
-- Main process (`src/main/`) does all the privileged work: file dialogs, ffmpeg audio extraction, the AssemblyAI request, settings storage, and writing markdown.
+- Main process (`src/main/`) does all the privileged work: file dialogs, ffmpeg audio extraction, the AssemblyAI requests, settings storage, and writing markdown.
+- **The job queue (`src/main/jobs/`) owns all transcription state.** The renderer is a view over it, not the source of truth, so progress survives a tab switch or a renderer reload. Every progress event carries a job id.
 - Preload (`src/preload.ts`) exposes a small typed `window.api` over a context bridge. The renderer has no direct Node or network access.
-- Renderer (`src/renderer/`) is the React UI: a short wizard of select, configure, transcribe, review, and save.
+- Renderer (`src/renderer/`) is the React UI: a queue on the left, a detail pane on the right.
+- A custom `fassembly-media://` protocol serves one job's extracted audio to the renderer so speaker snippets can be played, without granting it file access - the renderer only ever names a job id.
 
 Speech-to-text sits behind a small provider interface (`src/main/stt/`). AssemblyAI is the only provider today, but swapping or adding one is a single-file change.
 
-The cost on AssemblyAI for this setup (Universal-3 Pro plus diarization plus speaker identification) is about $0.25 per audio hour at the time of writing.
+Universal-3.5 Pro is $0.21 per audio hour at the time of writing; with diarization the practical cost is around $0.25. Universal-2 is cheaper ($0.15) and covers 99 languages rather than 18.
+
+**Stopping a job does not stop AssemblyAI.** There is no cancel endpoint, so once a transcript has been submitted it may still complete and be billed. Cancelling stops the app waiting for it; retrying resumes polling the same transcript rather than re-uploading.
 
 ## Security notes
 
@@ -91,18 +97,29 @@ The cost on AssemblyAI for this setup (Universal-3 Pro plus diarization plus spe
 
 ```
 src/
-  main.ts              app entry, window, CSP
+  main.ts              app entry, window, CSP, queue wiring
   preload.ts           context bridge (window.api)
   main/
     ipc.ts             IPC handlers
     settings.ts        JSON settings store + safeStorage
-    ffmpeg.ts          audio extraction
+    ffmpeg.ts          audio extraction (abortable, real progress)
     markdown.ts        transcript -> markdown
-    stt/               speech-to-text provider interface + AssemblyAI
+    mediaProtocol.ts   fassembly-media:// for speaker snippet playback
+    jobs/
+      queue.ts         the job manager: scheduling, state, events
+      runner.ts        one job's pipeline: extract -> upload -> transcribe -> save
+      validate.ts      validates renderer-supplied job specs
+      errors.ts        maps failures to actionable messages
+    stt/
+      assemblyai.ts    provider: submit + poll with backoff
+      upload.ts        streamed upload with byte progress
+      http.ts          retry, 429 handling, request pacing
+    util/              semaphore, async helpers, file + filename helpers
   renderer/
-    App.tsx            wizard state machine
-    screens/           one file per step, plus Record and Settings
-    components/        shared UI pieces
+    App.tsx            queue state, batch defaults vs per-job overrides
+    screens/           Queue (left rail), JobDetail (right pane), Record, Settings
+    components/        Dropzone, JobRow, BatchDefaults, AssignVoices, ...
   shared/
     types.ts           types shared across all layers
+    models.ts          the model list, single source of truth
 ```

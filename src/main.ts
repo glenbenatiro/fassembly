@@ -2,6 +2,10 @@ import { app, BrowserWindow, session, shell } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import { registerIpc } from './main/ipc';
+import { JobQueue } from './main/jobs/queue';
+import { getApiKey, getSettings } from './main/settings';
+import { sweepOldTemps } from './main/util/files';
+import { MEDIA_SCHEME, handleMediaProtocol, registerMediaScheme } from './main/mediaProtocol';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -10,12 +14,26 @@ if (started) {
 
 const isDev = !!MAIN_WINDOW_VITE_DEV_SERVER_URL;
 
+// Must happen before 'ready'.
+registerMediaScheme();
+
+const startupSettings = getSettings();
+const queue = new JobQueue({
+  concurrency: startupSettings.concurrency,
+  extractConcurrency: startupSettings.extractConcurrency,
+  providerId: startupSettings.provider,
+  // Read per attempt rather than caching: the key can be added or changed in
+  // Settings while jobs are sitting in the queue.
+  getApiKey,
+  getFilenamePattern: () => getSettings().filenamePattern,
+});
+
 const createWindow = () => {
   const mainWindow = new BrowserWindow({
-    width: 1100,
-    height: 760,
-    minWidth: 900,
-    minHeight: 620,
+    width: 1240,
+    height: 820,
+    minWidth: 1040,
+    minHeight: 640,
     backgroundColor: '#F4EDE0',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -58,19 +76,23 @@ const createWindow = () => {
 
 // Lock down what the renderer is allowed to load and connect to. The renderer
 // never talks to AssemblyAI directly (the main process does), so connect-src can
-// stay tight in production. Dev needs the Vite HMR allowances.
+// stay tight in production. media-src additionally allows the custom scheme that
+// serves a job's extracted audio for speaker identification. Dev needs the Vite
+// HMR allowances.
 function applyContentSecurityPolicy(): void {
   const policy = isDev
     ? "default-src 'self' data: blob:; " +
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
       "style-src 'self' 'unsafe-inline'; " +
       "img-src 'self' data: blob:; " +
+      `media-src 'self' blob: ${MEDIA_SCHEME}:; ` +
       "connect-src 'self' ws: wss: http://localhost:*;"
     : "default-src 'self'; " +
       "script-src 'self'; " +
       "style-src 'self' 'unsafe-inline'; " +
       "img-src 'self' data:; " +
       "font-src 'self' data:; " +
+      `media-src 'self' ${MEDIA_SCHEME}:; ` +
       "connect-src 'self';";
 
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
@@ -85,7 +107,10 @@ function applyContentSecurityPolicy(): void {
 
 app.on('ready', () => {
   applyContentSecurityPolicy();
-  registerIpc();
+  handleMediaProtocol((jobId) => queue.audioPath(jobId));
+  // Clean up extracted audio orphaned by a crash or a hard quit.
+  void sweepOldTemps(24 * 60 * 60_000);
+  registerIpc(queue);
   createWindow();
 });
 
@@ -93,6 +118,17 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+// Closing the window ends the run: the queue lives in memory and jobs do not
+// survive a restart. Shut down deliberately so ffmpeg children are killed and
+// temp audio is cleaned up, rather than left orphaned.
+let shuttingDown = false;
+app.on('will-quit', (event) => {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  event.preventDefault();
+  void queue.shutdown().finally(() => app.quit());
 });
 
 app.on('activate', () => {

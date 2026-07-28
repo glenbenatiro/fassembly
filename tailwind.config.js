@@ -11,8 +11,11 @@ module.exports = {
         },
         ink: {
           DEFAULT: '#2B2722', // primary text (warm espresso)
-          soft: '#6F665B', // secondary text / labels
-          faint: '#9A9086', // hints, timestamps
+          soft: '#6F665B', // secondary text / labels (~4.7:1 on paper, passes AA)
+          // Decorative only: placeholders, disabled glyphs, dividers. At ~3.2:1
+          // on paper it clears AA for large text and UI, but not body copy, so
+          // anything a user actually needs to read uses ink-soft instead.
+          faint: '#8B8177',
         },
         line: '#E4DAC8', // hairline borders / dividers
         pine: {
@@ -58,11 +61,18 @@ module.exports = {
           '0%': { strokeDashoffset: '32' },
           '100%': { strokeDashoffset: '0' },
         },
+        // For work that is genuinely running but cannot report a percentage,
+        // such as waiting on AssemblyAI, which does not expose progress.
+        indeterminate: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(300%)' },
+        },
       },
       animation: {
         'fade-rise': 'fade-rise 0.4s ease-out both',
         breathe: 'breathe 2s ease-in-out infinite',
         'draw-check': 'draw-check 0.5s ease-out 0.15s both',
+        indeterminate: 'indeterminate 1.4s ease-in-out infinite',
       },
     },
   },

@@ -46,12 +46,14 @@ export function Nav({
         <Mark />
         <span className="font-display text-lg font-semibold tracking-tight text-ink">Fassembly</span>
       </div>
-      <nav className="flex items-center gap-1">
+      <nav role="tablist" aria-label="Sections" className="flex items-center gap-1">
         {TABS.map((t) => (
           <button
             key={t.id}
+            role="tab"
+            aria-selected={tab === t.id}
             onClick={() => onChange(t.id)}
-            className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+            className={`rounded-lg px-3 py-1.5 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-pine/40 ${
               tab === t.id
                 ? 'bg-pine-wash text-pine-deep'
                 : 'text-ink-soft hover:bg-paper hover:text-ink'
@@ -59,7 +61,14 @@ export function Nav({
           >
             {t.label}
             {t.id === 'settings' && !hasApiKey && (
-              <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-amber align-middle" />
+              <>
+                <span
+                  className="ml-1.5 inline-block h-2 w-2 rounded-full bg-amber align-middle"
+                  aria-hidden="true"
+                />
+                {/* The dot alone is invisible to a screen reader. */}
+                <span className="sr-only"> - no API key set</span>
+              </>
             )}
           </button>
         ))}
