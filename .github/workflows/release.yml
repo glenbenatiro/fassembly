@@ -73,12 +73,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Fill in the release notes
+      # Release notes are prose, written by hand in the house style documented in
+      # README > Releasing > Release notes. The workflow seeds only the closing
+      # trailer, the one part it can state as fact. Auto-generating a commit list
+      # here would produce something that has to be deleted, and a bullet dump
+      # left in place contradicts the very style it is meant to follow.
+      - name: Seed the release notes
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tag='${{ steps.version.outputs.tag }}'
-          gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" \
-            -f tag_name="$tag" -q .body > notes.md
+          printf '## What changed\n\n_Not yet written. See README > Releasing > Release notes._\n\nReleased %s, at commit %s.\n' \
+            "$(date -u +%Y-%m-%d)" "$(git rev-parse --short HEAD)" > notes.md
           gh release edit "$tag" --notes-file notes.md

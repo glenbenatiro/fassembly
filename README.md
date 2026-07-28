@@ -46,6 +46,16 @@ Two long-lived branches:
 - **`main`** - integration. Every change lands here by pull request. CI (`.github/workflows/ci.yml`) runs lint and typecheck on each PR.
 - **`production`** - a pointer at a known-good `main` commit. **Fast-forward only**, so it can only ever reference a commit that already passed CI on `main`. Every commit that lands here is released.
 
+## Conventions
+
+**Commits follow [Conventional Commits](https://www.conventionalcommits.org).** The subject is `type(scope): summary`, lower case after the colon, imperative, no trailing full stop. Squash-merging a PR takes its title as the subject, so the **PR title** has to be conventional too, not just the commits inside it.
+
+Types in use: `feat`, `fix`, `ci`, `docs`, `chore`, `refactor`, `test`. Scopes track the source layout - `jobs`, `stt`, `ui`, `build`, `release` - and a change spanning two takes both, as in `feat(jobs,ui):`.
+
+**No em dashes, anywhere.** Not in source, comments, docs, commit messages, or release notes. Use a spaced hyphen ` - ` where you would reach for one. The single exception is the separator character class in `src/main/stt/identify.ts`, because transcripts genuinely contain em dashes and the matcher needs to handle them; it is written as the escape `\u2014` so no literal one appears in the tree. `npm run lint:prose` fails the build on a literal em dash.
+
+**No personal data in the repo.** Test fixtures use an invented cast. Never paste real transcript lines, names, or meeting content into source, tests, or commit messages, however convenient a real failing case is - transcripts are exactly the kind of input that carries other people's names, and a fixture outlives the bug it was written for.
+
 ## Releasing
 
 Installers are distributed as **GitHub Release assets** (build artifacts are not committed). Releasing is promoting `main` to `production`:
@@ -61,9 +71,23 @@ npm run promote
 
 `npm run promote` fast-forwards `production` to `origin/main` and pushes it. A non-fast-forward promote fails locally rather than creating a merge commit.
 
-That push triggers `.github/workflows/release.yml`, which tags the commit `v<version>`, builds the Windows installer on a Windows runner, publishes a GitHub Release via Electron Forge's GitHub publisher, and fills in generated release notes. Don't create tags by hand - the workflow owns them.
+That push triggers `.github/workflows/release.yml`, which tags the commit `v<version>`, builds the Windows installer on a Windows runner, and publishes a GitHub Release via Electron Forge's GitHub publisher. Don't create tags by hand - the workflow owns them.
 
 If you promote without bumping the version, the workflow **fails on purpose** with `vX.Y.Z already exists`, because Forge names the Release from `package.json` rather than from the tag. Bump and promote again.
+
+### Release notes
+
+The workflow seeds the body with the closing trailer only. **The notes themselves are written by hand** before the release is announced, because the useful part is the reasoning, and no generator produces that from commit subjects.
+
+The house style:
+
+- The title is the tag verbatim, `v` prefix included.
+- Explanatory **prose paragraphs, not bullet dumps**. A reader should come away understanding why a change was made, not just that it was.
+- `## What changed` first, then an optional release-specific section: `Known limitations`, `Measured`, `Verified`.
+- Shorthand numbers (`~0.9s`, `13-15x`, `164 MB`) and ISO dates (`2026-07-28`).
+- PR references inline, as `(#4)`.
+- Close with the trailer `Released <ISO date>, at commit <short sha>.`
+- No rollback section. Recovery is `git reset --hard <previous tag>` on `production`, which belongs here in the README rather than repeated in every release.
 
 The installer is currently unsigned, so Windows SmartScreen shows an "unknown publisher" prompt - users click **More info → Run anyway**. Code signing (an Authenticode certificate) removes this.
 

@@ -13,7 +13,8 @@
     "lint": "eslint --ext .ts,.tsx .",
     "typecheck": "tsc --noEmit",
     "test": "esbuild \"src/**/*.test.ts\" --bundle --format=esm --platform=node --outdir=.test-build --out-extension:.js=.mjs && node --test \".test-build/*.mjs\"",
-    "promote": "git fetch origin --prune && git checkout production && git merge --ff-only origin/main && git push origin production && git checkout main"
+    "promote": "git fetch origin --prune && git checkout production && git merge --ff-only origin/main && git push origin production && git checkout main",
+    "lint:prose": "node scripts/check-prose.mjs"
   },
   "keywords": [],
   "author": "glenb",

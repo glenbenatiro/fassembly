@@ -36,3 +36,10 @@ jobs:
 
       - name: Typecheck
         run: npm run typecheck
+
+      # House style, enforced rather than remembered: see README > Conventions.
+      - name: Prose
+        run: npm run lint:prose
+
+      - name: Test
+        run: npm test
