@@ -39,6 +39,18 @@ npm run make
 
 This produces an installer for your current platform under `out/`. Electron Forge is configured with makers for Windows, macOS, and Linux. On Windows, the installer lands at `out/make/squirrel.windows/x64/<name> Setup.exe`.
 
+Run that installer rather than launching `out/Fassembly-win32-x64/Fassembly.exe` by hand. Squirrel installs the app into `%LOCALAPPDATA%assembly` and creates the Desktop and Start menu shortcuts, and it is the Start menu shortcut that makes the app searchable - a loose exe under `out/` is never indexed. The Start menu shortcut is filed under the company name, which Forge reads from `author` in `package.json`.
+
+### The icon
+
+`assets/icon.ico` is generated rather than drawn:
+
+```bash
+npm run icon
+```
+
+`scripts/make-icon.mjs` renders the same mark the app header draws, at every size Windows asks for between 16 and 256px. Keeping it in code rather than in an exported bitmap means the Start menu tile and the running window cannot drift apart. Commit the result: the build reads the `.ico` and never runs the script. Regenerate after changing `Mark` in `src/renderer/components/Nav.tsx` or the palette in `tailwind.config.js`.
+
 ## Branches
 
 Two long-lived branches:
