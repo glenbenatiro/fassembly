@@ -31,6 +31,42 @@ On first run, open the Settings tab and paste your AssemblyAI API key. The key i
 
 While you are in Settings, you can also set a default output folder for each job, so saved transcripts land in the right place automatically.
 
+## Command line
+
+The `fassembly` command transcribes recordings from a terminal without opening the window. It runs the same pipeline as the app, with the same settings and the same stored API key, and saves the markdown in one go.
+
+```powershell
+fassembly "D:\Calls\standup.mp4" --names "Ana,Ben"
+fassembly --latest --names "Ana,Ben" --speakers 2
+fassembly one.mp4 two.m4a --out D:\Notes --json
+```
+
+`--latest` picks the newest recording in `Videos\Screen Recordings`, where the Windows Snipping Tool saves them, or in `Videos` if that folder does not exist. `--from <dir>` points it somewhere else. `fassembly --help` lists every option.
+
+Anything you leave out comes from Settings, as it does for the app's batch defaults. The transcript is always saved: to `--out`, else your default output folder, else next to the recording. There is no "who is who" step. Names passed with `--names` are applied when AssemblyAI Speaker Identification resolves them and the transcript backs them up, the same check the app runs; otherwise the speakers stay as `A`, `B` and the command says so.
+
+Progress goes to stderr, and the saved paths (or the `--json` result) go to stdout, so the output pipes cleanly. The exit code is `0` when every transcript was saved, `1` when a job failed or could not be saved, and `2` when nothing was started: a typo in the command, a missing file, or no API key.
+
+### Putting it on your PATH
+
+A command works in a terminal when a launcher for it sits in a folder listed in your `Path` environment variable. Installers usually add a folder of their own. Here npm does it instead, with no installer and no Path editing:
+
+```bash
+npm install
+npm run package   # builds out/Fassembly-win32-x64/Fassembly.exe
+npm link          # writes fassembly.cmd and fassembly.ps1 into npm's global folder, already on Path
+```
+
+Set your API key in the app first, then open a new terminal and run `fassembly --version`.
+
+To update, run `git pull`, `npm ci` and `npm run package`. The link points at this checkout, so it keeps working. With nvm-windows the link belongs to the active Node version, so run `npm link` again after `nvm use`.
+
+`bin/fassembly.mjs` is only a launcher: it starts `Fassembly.exe` without a window and waits for it. The work has to happen inside the packaged app because the API key is encrypted with Electron safeStorage, and the app's fuses deliberately disable running it as plain Node (`RunAsNode` in `forge.config.ts`), which is the shortcut other Electron command lines take. Like the app, the command is Windows only for now.
+
+### From WSL
+
+WSL adds Windows' Path to its own by default, so `fassembly` works there too. It still runs on Windows: the launcher converts absolute paths such as `/mnt/d/calls/standup.mp4` with `wslpath` before handing them over. WSL needs its own Node install to run the launcher.
+
 ## Building installers
 
 ```bash
@@ -39,7 +75,7 @@ npm run make
 
 This produces an installer for your current platform under `out/`. Electron Forge is configured with makers for Windows, macOS, and Linux. On Windows, the installer lands at `out/make/squirrel.windows/x64/<name> Setup.exe`.
 
-Run that installer rather than launching `out/Fassembly-win32-x64/Fassembly.exe` by hand. Squirrel installs the app into `%LOCALAPPDATA%assembly` and creates the Desktop and Start menu shortcuts, and it is the Start menu shortcut that makes the app searchable - a loose exe under `out/` is never indexed. The Start menu shortcut is filed under the company name, which Forge reads from `author` in `package.json`.
+Run that installer rather than launching `out/Fassembly-win32-x64/Fassembly.exe` by hand. Squirrel installs the app into `%LOCALAPPDATA%\fassembly` and creates the Desktop and Start menu shortcuts, and it is the Start menu shortcut that makes the app searchable - a loose exe under `out/` is never indexed. The Start menu shortcut is filed under the company name, which Forge reads from `author` in `package.json`.
 
 ### The icon
 
@@ -62,7 +98,7 @@ Two long-lived branches:
 
 **Commits follow [Conventional Commits](https://www.conventionalcommits.org).** The subject is `type(scope): summary`, lower case after the colon, imperative, no trailing full stop. Squash-merging a PR takes its title as the subject, so the **PR title** has to be conventional too, not just the commits inside it.
 
-Types in use: `feat`, `fix`, `ci`, `docs`, `chore`, `refactor`, `test`. Scopes track the source layout - `jobs`, `stt`, `ui`, `build`, `release` - and a change spanning two takes both, as in `feat(jobs,ui):`.
+Types in use: `feat`, `fix`, `ci`, `docs`, `chore`, `refactor`, `test`. Scopes track the source layout - `cli`, `jobs`, `stt`, `ui`, `build`, `release` - and a change spanning two takes both, as in `feat(jobs,ui):`.
 
 **No em dashes, anywhere.** Not in source, comments, docs, commit messages, or release notes. Use a spaced hyphen ` - ` where you would reach for one. The single exception is the separator character class in `src/main/stt/identify.ts`, because transcripts genuinely contain em dashes and the matcher needs to handle them; it is written as the escape `\u2014` so no literal one appears in the tree. `npm run lint:prose` fails the build on a literal em dash.
 
@@ -112,6 +148,7 @@ Only Windows is built. `forge.config.ts` ships `ffmpeg.exe` via `extraResource`,
 - Preload (`src/preload.ts`) exposes a small typed `window.api` over a context bridge. The renderer has no direct Node or network access.
 - Renderer (`src/renderer/`) is the React UI: a queue on the left, a detail pane on the right.
 - A custom `fassembly-media://` protocol serves one job's extracted audio to the renderer so speaker snippets can be played, without granting it file access - the renderer only ever names a job id.
+- **Command-line runs** (`src/main/cli.ts`) drive the same queue with no window. `bin/fassembly.mjs` starts the app with a `--cli` marker, and `src/main.ts` then skips the window, IPC, CSP and media protocol. The parsing, defaults and output live in `src/cli/`, free of Electron so they can be unit tested.
 
 Speech-to-text sits behind a small provider interface (`src/main/stt/`). AssemblyAI is the only provider today, but swapping or adding one is a single-file change.
 
@@ -132,10 +169,14 @@ Universal-3.5 Pro is $0.21 per audio hour at the time of writing; with diarizati
 ## Project layout
 
 ```
+bin/
+  fassembly.mjs        the launcher `npm link` puts on PATH
 src/
-  main.ts              app entry, window, CSP, queue wiring
+  main.ts              app entry, window, CSP, queue wiring, command-line mode
   preload.ts           context bridge (window.api)
+  cli/                 command-line parsing, defaults and output (no Electron)
   main/
+    cli.ts             one headless run: parse, enqueue, wait, report
     ipc.ts             IPC handlers
     settings.ts        JSON settings store + safeStorage
     ffmpeg.ts          audio extraction (abortable, real progress)
@@ -158,4 +199,5 @@ src/
   shared/
     types.ts           types shared across all layers
     models.ts          the model list, single source of truth
+    dates.ts, paths.ts helpers the app and the command line share
 ```

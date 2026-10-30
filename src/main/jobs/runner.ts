@@ -16,6 +16,11 @@ export interface RunDeps {
   patch(p: Partial<JobRecord>): void;
 }
 
+export interface RunOutcome {
+  /** Why auto-save failed, when it was asked for and did. The transcript is still in hand. */
+  saveError: string | null;
+}
+
 /**
  * The per-job pipeline: extract -> upload -> transcribe -> optionally save.
  *
@@ -23,7 +28,7 @@ export interface RunDeps {
  * during polling resumes polling rather than re-uploading and re-billing a
  * 500 MB file.
  */
-export async function runJob(job: JobRuntime, deps: RunDeps): Promise<void> {
+export async function runJob(job: JobRuntime, deps: RunDeps): Promise<RunOutcome> {
   const { spec } = job.record;
   const signal = job.controller.signal;
 
@@ -135,12 +140,13 @@ export async function runJob(job: JobRuntime, deps: RunDeps): Promise<void> {
       const savedPath = await writeFileUnique(path.join(spec.outputDir, filename), markdown);
       deps.patch({ savedPath });
     } catch (err) {
-      // The transcript is in hand; a save failure must not discard it. Surface
-      // the problem and let the user save manually from the detail pane.
-      const reason = err instanceof Error ? err.message : String(err);
-      deps.patch({ message: `Transcribed, but saving failed: ${reason}` });
+      // The transcript is in hand; a save failure must not discard it. Hand the
+      // reason back so the final status can say so, and let the user save
+      // manually from the detail pane.
+      return { saveError: err instanceof Error ? err.message : String(err) };
     }
   }
+  return { saveError: null };
 }
 
 function formatMB(bytes: number | null): string {
