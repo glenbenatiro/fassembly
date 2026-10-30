@@ -4,6 +4,9 @@
   "version": "1.0.1",
   "description": "Desktop app that turns meeting recordings into speaker-labelled markdown transcripts using AssemblyAI",
   "main": ".vite/build/main.js",
+  "bin": {
+    "fassembly": "bin/fassembly.mjs"
+  },
   "private": true,
   "scripts": {
     "start": "electron-forge start",

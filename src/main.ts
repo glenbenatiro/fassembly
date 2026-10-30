@@ -1,6 +1,8 @@
 import { app, BrowserWindow, session, shell } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
+import { cliArgsFrom } from './cli/args';
+import { runCli } from './main/cli';
 import { registerIpc } from './main/ipc';
 import { JobQueue } from './main/jobs/queue';
 import { getApiKey, getSettings } from './main/settings';
@@ -14,8 +16,21 @@ if (started) {
 
 const isDev = !!MAIN_WINDOW_VITE_DEV_SERVER_URL;
 
-// Must happen before 'ready'.
-registerMediaScheme();
+// Set when bin/fassembly.mjs launched us from a terminal. A plain launch, and
+// Squirrel's install events, never carry the marker, so they never land here.
+const cliArgs = started ? null : cliArgsFrom(process.argv);
+
+if (cliArgs) {
+  // Nothing is rendered, so there is no reason to start a GPU process.
+  app.disableHardwareAcceleration();
+  // Keep Chromium's caches and storage apart from the window's, so a run started
+  // while the app is open does not contend for files the app holds. settings.json
+  // and the encrypted key stay in userData, shared with the app.
+  app.setPath('sessionData', path.join(app.getPath('userData'), 'CLI Session'));
+} else {
+  // Must happen before 'ready'.
+  registerMediaScheme();
+}
 
 const startupSettings = getSettings();
 const queue = new JobQueue({
@@ -106,13 +121,35 @@ function applyContentSecurityPolicy(): void {
 }
 
 app.on('ready', () => {
-  applyContentSecurityPolicy();
-  handleMediaProtocol((jobId) => queue.audioPath(jobId));
   // Clean up extracted audio orphaned by a crash or a hard quit.
   void sweepOldTemps(24 * 60 * 60_000);
+  if (cliArgs) {
+    void runHeadless(cliArgs);
+    return;
+  }
+  applyContentSecurityPolicy();
+  handleMediaProtocol((jobId) => queue.audioPath(jobId));
   registerIpc(queue);
   createWindow();
 });
+
+async function runHeadless(args: string[]): Promise<void> {
+  let code = 1;
+  try {
+    code = await runCli(args, queue);
+  } catch (err) {
+    process.stderr.write(`fassembly: ${err instanceof Error ? err.message : String(err)}\n`);
+  }
+  // app.exit skips will-quit, so stop ffmpeg and remove temp audio here. Then
+  // let stdout and stderr drain: console writes are asynchronous on Windows.
+  await queue.shutdown();
+  await Promise.all(
+    [process.stdout, process.stderr].map(
+      (stream) => new Promise<void>((resolve) => stream.write('', () => resolve())),
+    ),
+  );
+  app.exit(code);
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
