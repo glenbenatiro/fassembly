@@ -6,7 +6,8 @@ import { JobDetail } from './screens/JobDetail';
 import { RecordScreen } from './screens/Record';
 import { SettingsScreen } from './screens/Settings';
 import type { BatchValues } from './components/BatchDefaults';
-import { parentDir, todayIso } from './util';
+import { todayIso } from '../shared/dates';
+import { parentDir } from '../shared/paths';
 
 export type Tab = 'transcribe' | 'record' | 'settings';
 
