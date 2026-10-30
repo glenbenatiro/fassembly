@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { JobSpec, ModelId } from '../../shared/types';
+import { todayIso } from '../../shared/dates';
 import { isMediaPath } from '../../shared/media';
 import { MODELS } from '../../shared/models';
 
@@ -62,7 +63,7 @@ export async function validateJobSpec(raw: unknown): Promise<JobSpec> {
   const isoDate =
     typeof spec.isoDate === 'string' && ISO_DATE.test(spec.isoDate)
       ? spec.isoDate
-      : new Date().toISOString().slice(0, 10);
+      : todayIso();
 
   const participants = Array.isArray(spec.participants)
     ? spec.participants
