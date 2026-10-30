@@ -266,7 +266,7 @@ export class JobQueue {
         { force: true },
       );
 
-      await runJob(job, {
+      const { saveError } = await runJob(job, {
         extractSlots: this.extractSlots,
         apiKey,
         provider: getProvider(this.opts.providerId),
@@ -279,7 +279,11 @@ export class JobQueue {
         {
           status: 'done',
           percent: 100,
-          message: job.record.savedPath ? 'Saved' : 'Ready to review',
+          message: job.record.savedPath
+            ? 'Saved'
+            : saveError
+              ? `Transcribed, but saving failed: ${saveError}`
+              : 'Ready to review',
           finishedAt: Date.now(),
         },
         { force: true },
