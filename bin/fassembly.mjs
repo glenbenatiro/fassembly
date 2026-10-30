@@ -32,10 +32,30 @@ const userArgs = process.argv.slice(2);
 const args = inWsl ? userArgs.map(toWindowsArg) : userArgs;
 
 // `--` stops Chromium from reading the user's flags as its own switches.
-const child = spawn(exe, ['--cli', '--', ...args], { stdio: 'inherit' });
+const child = spawn(exe, ['--cli', '--', ...args], { stdio: ['inherit', 'pipe', 'inherit'] });
 
 child.on('error', (err) => fail(`could not start ${exe}: ${err.message}`));
-child.on('exit', (code) => process.exit(code ?? 1));
+// 'close' rather than 'exit', so all of stdout is through before we finish.
+child.on('close', (code) => {
+  process.exitCode = code ?? 1;
+});
+
+// The Electron runtime writes one line break to stdout as it starts, in every
+// mode and before any app code runs. Drop it, so that stdout carries only the
+// results and `$paths = fassembly ...` gets no empty first line.
+let head = Buffer.alloc(0);
+let headDone = false;
+child.stdout.on('data', (chunk) => {
+  if (headDone) return void process.stdout.write(chunk);
+  head = Buffer.concat([head, chunk]);
+  if (head.length === 1 && head[0] === 0x0d) return; // wait for the \n
+  headDone = true;
+  const skip = head[0] === 0x0a ? 1 : head[0] === 0x0d && head[1] === 0x0a ? 2 : 0;
+  process.stdout.write(head.subarray(skip));
+});
+child.stdout.on('end', () => {
+  if (!headDone) process.stdout.write(head);
+});
 
 // When Ctrl+C reaches the app too, it stops cleanly and reports what it had
 // already submitted. Give it a moment to do that before forcing it; a second

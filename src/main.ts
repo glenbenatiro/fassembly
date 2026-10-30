@@ -21,12 +21,10 @@ const isDev = !!MAIN_WINDOW_VITE_DEV_SERVER_URL;
 const cliArgs = started ? null : cliArgsFrom(process.argv);
 
 if (cliArgs) {
-  // Nothing is rendered, so there is no reason to start a GPU process.
+  // Nothing is rendered, so there is no reason to start a GPU process. Session
+  // data deliberately stays where the app keeps it: safeStorage's key lives
+  // there, and moving it leaves the stored API key undecryptable.
   app.disableHardwareAcceleration();
-  // Keep Chromium's caches and storage apart from the window's, so a run started
-  // while the app is open does not contend for files the app holds. settings.json
-  // and the encrypted key stay in userData, shared with the app.
-  app.setPath('sessionData', path.join(app.getPath('userData'), 'CLI Session'));
 } else {
   // Must happen before 'ready'.
   registerMediaScheme();
