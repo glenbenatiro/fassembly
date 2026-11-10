@@ -86,7 +86,7 @@ export interface JobSpec {
   speakerNames: string[]; // fed to AssemblyAI Speaker Identification (known_values)
   language: string | null; // null => language_detection
   outputDir: string; // '' disables autosave for this job
-  isoDate: string; // yyyy-mm-dd, used in frontmatter and the filename
+  isoDate: string; // yyyy-mm-dd, used in frontmatter and the filename; '' = the recording's date
   participants: string[];
   autoSave: boolean;
 }

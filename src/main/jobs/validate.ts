@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { JobSpec, ModelId } from '../../shared/types';
-import { todayIso } from '../../shared/dates';
+import { recordingDateIso } from '../../shared/dates';
 import { isMediaPath } from '../../shared/media';
 import { MODELS } from '../../shared/models';
 
@@ -60,10 +60,12 @@ export async function validateJobSpec(raw: unknown): Promise<JobSpec> {
     throw new Error(`Invalid language code: ${language}`);
   }
 
+  // An empty date means "the day of the recording", worked out here because only
+  // main can read the file. A date the user typed is kept as given.
   const isoDate =
     typeof spec.isoDate === 'string' && ISO_DATE.test(spec.isoDate)
       ? spec.isoDate
-      : todayIso();
+      : recordingDateIso(path.basename(resolved), stat.mtime);
 
   const participants = Array.isArray(spec.participants)
     ? spec.participants

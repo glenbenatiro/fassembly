@@ -11,6 +11,8 @@ Built with Electron, React, TypeScript, and Vite via Electron Forge.
 3. You press Transcribe. Recordings run **in parallel** (up to 10 at a time, 3 by default), each with its own progress.
 4. For each finished one you confirm who is who - you get each voice's longest line and a play button - then save it as markdown.
 
+Each transcript is dated by its recording, not by the day you transcribe it: the date in the file name when it has one (the Snipping Tool's `Screen Recording 2026-11-09 184950.mp4` gives `2026-11-09`), else the day the file was last modified. In the app you can still change it before saving.
+
 The audio extraction step keeps uploads small. Speaker names you provide up front are sent to AssemblyAI Speaker Identification and offered as suggestions when you confirm speakers afterwards.
 
 Parallelism is capped separately for the two stages: the slider controls how many recordings are in flight (network-bound), while a smaller limit controls concurrent ffmpeg extractions (CPU-bound). Uploads are streamed, so memory stays flat no matter how large the batch.

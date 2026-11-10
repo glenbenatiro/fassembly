@@ -21,7 +21,7 @@ const DEFAULTS: SpecDefaults = {
 };
 
 test('with no options, the app settings decide, and the file saves beside the recording', () => {
-  const [spec] = buildSpecs(['/calls/standup.mp4'], NO_OPTIONS, DEFAULTS, '2026-05-04');
+  const [spec] = buildSpecs(['/calls/standup.mp4'], NO_OPTIONS, DEFAULTS);
   assert.deepEqual(spec, {
     filePath: '/calls/standup.mp4',
     model: 'universal-3-5-pro',
@@ -29,7 +29,7 @@ test('with no options, the app settings decide, and the file saves beside the re
     speakerNames: ['Dana'],
     language: null,
     outputDir: '/calls',
-    isoDate: '2026-05-04',
+    isoDate: '',
     participants: ['Dana', 'Sebastian'],
     autoSave: true,
   });
@@ -37,7 +37,7 @@ test('with no options, the app settings decide, and the file saves beside the re
 
 test('a default save folder from Settings beats the recording folder', () => {
   const defaults = { ...DEFAULTS, defaultOutputDir: 'D:\\Notes', defaultLanguage: 'en' };
-  const [spec] = buildSpecs(['C:\\Calls\\a.mp4'], NO_OPTIONS, defaults, '2026-05-04');
+  const [spec] = buildSpecs(['C:\\Calls\\a.mp4'], NO_OPTIONS, defaults);
   assert.equal(spec.outputDir, 'D:\\Notes');
   assert.equal(spec.language, 'en');
 });
@@ -51,7 +51,7 @@ test('options override settings, and --names fills both the roster and the parti
     out: '/out',
     json: true,
   };
-  const specs = buildSpecs(['/a.mp4', '/b.wav'], options, DEFAULTS, '2026-05-04');
+  const specs = buildSpecs(['/a.mp4', '/b.wav'], options, DEFAULTS);
   assert.equal(specs.length, 2);
   for (const spec of specs) {
     assert.deepEqual(spec.speakerNames, ['Priya', 'Tomas']);
