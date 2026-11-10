@@ -1,7 +1,6 @@
 import { app } from 'electron';
 import path from 'node:path';
 import type { JobRecord, JobSpec } from '../shared/types';
-import { todayIso } from '../shared/dates';
 import { HELP_TEXT, parseCliArgs, UsageError, type CliSource } from '../cli/args';
 import { buildSpecs } from '../cli/specs';
 import { defaultLatestDir, newestRecording } from '../cli/latest';
@@ -61,7 +60,7 @@ export async function runCli(args: readonly string[], queue: JobQueue): Promise<
 
   let specs: JobSpec[];
   try {
-    const built = buildSpecs(files, command.options, getSettings(), todayIso());
+    const built = buildSpecs(files, command.options, getSettings());
     specs = await Promise.all(built.map((spec) => validateJobSpec(spec)));
   } catch (e) {
     err(`fassembly: ${e instanceof Error ? e.message : String(e)}`);

@@ -6,7 +6,6 @@ import { JobDetail } from './screens/JobDetail';
 import { RecordScreen } from './screens/Record';
 import { SettingsScreen } from './screens/Settings';
 import type { BatchValues } from './components/BatchDefaults';
-import { todayIso } from '../shared/dates';
 import { parentDir } from '../shared/paths';
 
 export type Tab = 'transcribe' | 'record' | 'settings';
@@ -85,7 +84,7 @@ function toSpec(batch: BatchValues, filePath: string, participants: string): Job
     speakerNames: batch.speakerNames.map((n) => n.trim()).filter(Boolean),
     language: batch.language || null,
     outputDir: batch.outputDir || parentDir(filePath),
-    isoDate: todayIso(),
+    isoDate: '', // main dates it from the recording
     participants: participants.split(',').map((p) => p.trim()).filter(Boolean),
     autoSave: batch.autoSave,
   };

@@ -22,7 +22,6 @@ export function buildSpecs(
   files: readonly string[],
   options: TranscribeOptions,
   defaults: SpecDefaults,
-  isoDate: string,
 ): JobSpec[] {
   const participants =
     options.names ??
@@ -38,7 +37,7 @@ export function buildSpecs(
     speakerNames: options.names ?? defaults.defaultSpeakerNames,
     language: options.language ?? (defaults.defaultLanguage || null),
     outputDir: options.out ?? (defaults.defaultOutputDir || parentDir(filePath)),
-    isoDate,
+    isoDate: '', // dated from the recording when the job is validated
     participants,
     autoSave: true,
   }));
